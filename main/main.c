@@ -1,13 +1,16 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "wifi_app.h"
 
 #include "lora.h"
+#include "nvs_utils.h"
 
 static const char *TAG = "MAIN";
 
-void app_main(void)
-{
+void app_main(void){
+	esp_err_t ret = nvs_init_storage();
+    ESP_ERROR_CHECK(ret);
     ESP_LOGI(TAG, "System start");
 
     if (lora_init() != ESP_OK){
@@ -24,6 +27,8 @@ void app_main(void)
         ESP_LOGE(TAG, "LoRa RX start failed");
         return;
     }
+    ESP_ERROR_CHECK(esp_netif_init());
+    wifi_app_start();
 
     ESP_LOGI(TAG, "LoRa running");
 }
