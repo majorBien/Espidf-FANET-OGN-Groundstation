@@ -838,3 +838,10 @@ C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/ra01s/CMakeFiles/lis
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/ra01s/CMakeFiles/install.dir
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/ra01s/CMakeFiles/install/local.dir
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/ra01s/CMakeFiles/install/strip.dir
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/CMakeFiles/__idf_fanet_decoder.dir
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/CMakeFiles/edit_cache.dir
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/CMakeFiles/rebuild_cache.dir
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/CMakeFiles/list_install_components.dir
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/CMakeFiles/install.dir
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/CMakeFiles/install/local.dir
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/CMakeFiles/install/strip.dir
