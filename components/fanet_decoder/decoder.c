@@ -3,153 +3,162 @@
  *
  *  Created on: 21 kwi 2026
  *      Author: majorBien
+ *  Modified: dostosowany do nowego types.h/types.c
  */
-
-
 
 #include "decoder.h"
 #include "types.h"
 
 #include <string.h>
+#include <stdint.h>
 #include <time.h>
 
 #include "esp_log.h"
 
 static const char *TAG = "FANET_DECODER";
 
-/* external stores (from your types module) */
-extern weatherData weatherStore[MAX_DEVICES];
-extern trackingData trackingStore[MAX_DEVICES];
+/* =========================
+ * RAW HEADER PARSER
+ * ========================= */
+static inline void fanet_read_header(const uint8_t *data,
+                                      uint8_t *type,
+                                      uint8_t *vendor,
+                                      uint16_t *addr)
+{
+    *type   = data[0] & 0x3F;
+    *vendor = data[1];
+    *addr   = (uint16_t)data[2] | ((uint16_t)data[3] << 8);
+}
 
-/* external unpack functions (from your cpp ported logic) */
-bool unpack_weatherdata(uint8_t *buffer, weatherData *wData, float snr, float rssi);
-bool unpack_trackingdata(uint8_t *buffer, trackingData *data, int rssi, int snr);
-bool unpack_ground_trackingdata(uint8_t *buffer, trackingData *data, int rssi, int snr);
-
-/* optional store functions */
-int storeWeatherData(const weatherData *newData);
-int storeTrackingData(const trackingData *newData);
-
-/* FANET packet types */
-#define FANET_PCK_TYPE_TRACKING        0x01
-#define FANET_PCK_TYPE_NAME            0x02
-#define FANET_PCK_TYPE_WEATHER         0x04
-#define FANET_PCK_TYPE_GROUND_TRACKING 0x07
-
-
+/* =========================
+ * INIT
+ * ========================= */
 void fanet_decoder_init(void)
 {
-    ESP_LOGI(TAG, "Decoder init");
+    ESP_LOGI(TAG, "FANET decoder initialized (using types.c unpackers)");
 }
 
-
-/**
- * helper: safe header parse
- */
-static inline const fanet_header *get_header(const uint8_t *data)
-{
-    return (const fanet_header *)data;
-}
-
-
+/* =========================
+ * MAIN DECODER
+ * ========================= */
 void fanet_decoder_decode(const uint8_t *data, int len, int rssi, int snr)
 {
-    if (!data || len < sizeof(fanet_header)) {
-        ESP_LOGW(TAG, "Invalid packet (len=%d)", len);
+    if (!data || len < 4) {
+        ESP_LOGW(TAG, "Packet too small (%d)", len);
         return;
     }
 
-    const fanet_header *header = get_header(data);
+    uint8_t type;
+    uint8_t vendor;
+    uint16_t addr;
 
-    switch (header->type)
+    fanet_read_header(data, &type, &vendor, &addr);
+    (void)vendor;   // vendor already inside packet, unpack functions will read it
+
+    switch (type)
     {
-        case FANET_PCK_TYPE_WEATHER:
-        {
-            weatherData wd;
-            memset(&wd, 0, sizeof(wd));
-
-            if (unpack_weatherdata((uint8_t *)data, &wd, snr, rssi)) {
-                int idx = storeWeatherData(&wd);
-
-                ESP_LOGI(TAG,
-                         "WEATHER id=%04X rssi=%d snr=%d lat=%.5f lon=%.5f T=%.1f",
-                         wd.fanet_id,
-                         rssi,
-                         snr,
-                         wd.lat,
-                         wd.lon,
-                         wd.temp);
-
-                ESP_LOGI(TAG, "stored index=%d", idx);
-            }
-            break;
+    /* ================= TRACKING (type 1) ================= */
+    case FANET_PCK_TYPE_TRACKING:
+    {
+        if (len < sizeof(fanet_packet_t1)) {
+            ESP_LOGW(TAG, "TRACK packet too short (%d < %d)", len, (int)sizeof(fanet_packet_t1));
+            return;
         }
 
-        case FANET_PCK_TYPE_TRACKING:
-        {
-            trackingData td;
-            memset(&td, 0, sizeof(td));
+        trackingData td;
+        memset(&td, 0, sizeof(td));
 
-            if (unpack_trackingdata((uint8_t *)data, &td, rssi, snr)) {
-                int idx = storeTrackingData(&td);
-
-                ESP_LOGI(TAG,
-                         "TRACK id=%04X rssi=%d snr=%d lat=%.5f lon=%.5f alt=%.1f spd=%.1f",
-                         td.fanet_id,
-                         rssi,
-                         snr,
-                         td.lat,
-                         td.lon,
-                         td.alt,
-                         td.speed);
-
-                ESP_LOGI(TAG, "stored index=%d", idx);
-            }
-            break;
+        if (!unpack_trackingdata((uint8_t*)data, &td, rssi, snr)) {
+            ESP_LOGW(TAG, "Failed to unpack tracking data (invalid speed)");
+            return;
         }
 
-        case FANET_PCK_TYPE_GROUND_TRACKING:
-        {
-            trackingData td;
-            memset(&td, 0, sizeof(td));
+        int idx = storeTrackingData(&td);
 
-            if (unpack_ground_trackingdata((uint8_t *)data, &td, rssi, snr)) {
-                int idx = storeTrackingData(&td);
+        ESP_LOGI(TAG,
+                 "TRACK id=%04X rssi=%d snr=%.1f lat=%.5f lon=%.5f alt=%.1f spd=%.1f climb=%.1f heading=%.1f acft=%d",
+                 td.common.fanet_id, td.common.rssi, td.common.snr,
+                 td.common.lat, td.common.lon, td.alt, td.speed, td.climb, td.heading,
+                 td.aircraftType);
+        ESP_LOGI(TAG, "stored index=%d", idx);
+        break;
+    }
 
-                ESP_LOGI(TAG,
-                         "GROUND id=%04X rssi=%d snr=%d lat=%.5f lon=%.5f state=%d",
-                         td.fanet_id,
-                         rssi,
-                         snr,
-                         td.lat,
-                         td.lon,
-                         td.state);
-
-                ESP_LOGI(TAG, "stored index=%d", idx);
-            }
-            break;
+    /* ================= WEATHER (type 4) ================= */
+    case FANET_PCK_TYPE_WEATHER:
+    {
+        if (len < sizeof(fanet_packet_t4)) {
+            ESP_LOGW(TAG, "WEATHER packet too short (%d < %d)", len, (int)sizeof(fanet_packet_t4));
+            return;
         }
 
-        case FANET_PCK_TYPE_NAME:
-        {
-            char name[32] = {0};
+        weatherData wd;
+        memset(&wd, 0, sizeof(wd));
 
-            int name_len = len - 4;
-            if (name_len > (int)sizeof(name) - 1)
-                name_len = sizeof(name) - 1;
-
-            memcpy(name, &data[4], name_len);
-
-            ESP_LOGI(TAG,
-                     "NAME vid=%02X id=%04X name=%s",
-                     header->vendor,
-                     header->address,
-                     name);
-            break;
+        if (!unpack_weatherdata((uint8_t*)data, &wd, (float)snr, (float)rssi)) {
+            ESP_LOGW(TAG, "Failed to unpack weather data");
+            return;
         }
 
-        default:
-            ESP_LOGW(TAG, "Unknown FANET type: 0x%02X", header->type);
-            break;
+        int idx = storeWeatherData(&wd);
+
+        ESP_LOGI(TAG,
+                 "WEATHER id=%04X rssi=%d snr=%.1f lat=%.5f lon=%.5f T=%.1f hum=%.1f%% press=%.1fhPa wind=%.1f/%.1f",
+                 wd.common.fanet_id, wd.common.rssi, wd.common.snr,
+                 wd.common.lat, wd.common.lon, wd.temp, wd.Humidity, wd.Baro,
+                 wd.wSpeed, wd.wHeading);
+        ESP_LOGI(TAG, "stored index=%d", idx);
+        break;
+    }
+
+    /* ================= GROUND TRACKING (type 7) ================= */
+    case FANET_PCK_TYPE_GROUND_TRACKING:
+    {
+        if (len < sizeof(fanet_packet_t7)) {
+            ESP_LOGW(TAG, "GROUND packet too short (%d < %d)", len, (int)sizeof(fanet_packet_t7));
+            return;
+        }
+
+        trackingData td;
+        memset(&td, 0, sizeof(td));
+
+        if (!unpack_ground_trackingdata((uint8_t*)data, &td, rssi, snr)) {
+            ESP_LOGW(TAG, "Failed to unpack ground tracking data");
+            return;
+        }
+
+        int idx = storeTrackingData(&td);
+
+        ESP_LOGI(TAG,
+                 "GROUND id=%04X rssi=%d snr=%.1f lat=%.5f lon=%.5f state=%d (%s)",
+                 td.common.fanet_id, td.common.rssi, td.common.snr,
+                 td.common.lat, td.common.lon, td.state,
+                 (td.state < 16) ? trck_state_names[td.state] : "unknown");
+        ESP_LOGI(TAG, "stored index=%d", idx);
+        break;
+    }
+
+    /* ================= NAME (type 2) ================= */
+    case FANET_PCK_TYPE_NAME:
+    {
+        if (len <= 4) {
+            ESP_LOGW(TAG, "NAME packet too short");
+            return;
+        }
+
+        char name[32] = {0};
+        int name_len = len - 4;
+        if (name_len > (int)sizeof(name) - 1)
+            name_len = sizeof(name) - 1;
+        memcpy(name, &data[4], name_len);
+
+        ESP_LOGI(TAG, "NAME vid=%02X id=%04X name=%s", vendor, addr, name);
+        break;
+    }
+
+    /* ================= UNKNOWN ================= */
+    default:
+        ESP_LOGW(TAG, "Unknown FANET type=0x%02X len=%d", type, len);
+        break;
     }
 }
