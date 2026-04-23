@@ -22,7 +22,7 @@
 * 🔄 OGN data push to server (coming soon)
 * 🔄 OGN tracker data reception (coming soon)
 * 🔄 Web app data visualisation (coming soon)
-* 🔄 Hardware abstraction layer for SX127X and SX126X modules
+* 🔄 Hardware abstraction layer for SX127X and SX126X modules (coming soon)
 ---
 
 ## Getting Started
