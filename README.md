@@ -41,26 +41,9 @@ git clone https://github.com/yourusername/esp32-fanet-groundstation.git
 cd esp32-fanet-groundstation
 ```
 
-### 2. Configure WiFi (optional, for Station mode)
-
-```bash
-idf.py menuconfig
-```
-
-Navigate to:
-
-```
-Component config → WiFi Configuration
-```
-
-Set:
-
-* WiFi SSID
-* WiFi Password
-
 ---
 
-### 3. Build the project
+### 2. Build the project
 
 ```bash
 idf.py build
@@ -68,7 +51,7 @@ idf.py build
 
 ---
 
-### 4. Flash to ESP32
+### 3. Flash to ESP32
 
 ```bash
 idf.py -p PORT flash monitor
