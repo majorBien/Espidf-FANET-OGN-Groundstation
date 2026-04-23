@@ -6,12 +6,14 @@
 ---
 
 ## Current Features
-
+* ✅ Integrated LoRa PHY layer (SX1262)
 * ✅ FANET protocol decoder (working)
 * ✅ FANET data display via Serial Monitor
 * ✅ Built-in HTTP server
 * ✅ OTA (Over-The-Air) updates
 * ✅ WiFi Access Point + Station mode
+* ⚠️ Currently detects only balloons, paragliders, and gliders equipped with FANET transmitters
+* ❌ No support for OGN trackers (at this time)
 
 ---
 
@@ -20,6 +22,7 @@
 * 🔄 OGN data push to server (coming soon)
 * 🔄 OGN tracker data reception (coming soon)
 * 🔄 Web app data visualisation (coming soon)
+* 🔄 Hardware abstraction layer for SX127X and SX126X modules
 ---
 
 ## Getting Started
