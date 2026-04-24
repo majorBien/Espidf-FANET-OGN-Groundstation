@@ -1,11 +1,63 @@
-ESP-IDF template app
-====================
+# ESP32 FANET-OGN Ground Station
 
-This is a template application to be used with [Espressif IoT Development Framework](https://github.com/espressif/esp-idf).
+> ⚠️ **Project Status: Active Development**
+> Core features implemented, ongoing work for full OGN integration.
 
-Please check [ESP-IDF docs](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for getting started instructions.
+---
 
-*Code in this repository is in the Public Domain (or CC0 licensed, at your option.)
-Unless required by applicable law or agreed to in writing, this
-software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-CONDITIONS OF ANY KIND, either express or implied.*
+## Current Features
+* ✅ Integrated LoRa PHY layer (SX1262)
+* ✅ FANET protocol decoder (working)
+* ✅ FANET data display via Serial Monitor
+* ✅ Built-in HTTP server
+* ✅ OTA (Over-The-Air) updates
+* ✅ WiFi Access Point + Station mode
+* ⚠️ Currently detects only balloons, paragliders, and gliders equipped with FANET transmitters
+* ❌ No support for OGN trackers (at this time)
+
+---
+
+## Roadmap
+
+* 🔄 OGN data push to server (coming soon)
+* 🔄 OGN tracker data reception (coming soon)
+* 🔄 Web app data visualisation (coming soon)
+* 🔄 Hardware abstraction layer for SX127X and SX126X modules (coming soon)
+---
+
+## Getting Started
+
+### Prerequisites
+
+* **ESP-IDF 5.3** or newer
+* ESP32 development board
+* USB cable for flashing
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/esp32-fanet-groundstation.git
+cd esp32-fanet-groundstation
+```
+
+---
+
+### 2. Build the project
+
+```bash
+idf.py build
+```
+
+---
+
+### 3. Flash to ESP32
+
+```bash
+idf.py -p PORT flash monitor
+```
+
+Replace `PORT` with your device (e.g., `/dev/ttyUSB0` on Linux or `COM3` on Windows).
