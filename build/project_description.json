@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "ogn-station",
-    "project_version":    "b3b8de7-dirty",
+    "project_version":    "00cdaa3-dirty",
     "project_path":       "C:/Users/lenovo/workspace-eclipse/ogn-station",
     "idf_path":           "C:/Espressif/frameworks/esp-idf-v5.4",
     "build_dir":          "C:/Users/lenovo/workspace-eclipse/ogn-station/build",
@@ -1045,7 +1045,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/libfanet_decoder.a",
-            "sources": [ "C:/Users/lenovo/workspace-eclipse/ogn-station/components/fanet_decoder/lora.c", "C:/Users/lenovo/workspace-eclipse/ogn-station/components/fanet_decoder/decoder.c", "C:/Users/lenovo/workspace-eclipse/ogn-station/components/fanet_decoder/types.c" ],
+            "sources": [ "C:/Users/lenovo/workspace-eclipse/ogn-station/components/fanet_decoder/rf.c", "C:/Users/lenovo/workspace-eclipse/ogn-station/components/fanet_decoder/decoder.c", "C:/Users/lenovo/workspace-eclipse/ogn-station/components/fanet_decoder/types.c" ],
             "include_dirs": [ "." ]
         },
         "fatfs": {

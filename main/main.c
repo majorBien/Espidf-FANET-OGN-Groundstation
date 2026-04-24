@@ -3,27 +3,30 @@
 #include "esp_log.h"
 #include "wifi_app.h"
 
-#include "lora.h"
+#include "rf.h"
 #include "nvs_utils.h"
+#define txPowerInDbm 22
+#define frequencyInHz 868000000
 
 static const char *TAG = "MAIN";
+lora_receiver_t rf_config;
 
 void app_main(void){
 	esp_err_t ret = nvs_init_storage();
     ESP_ERROR_CHECK(ret);
     ESP_LOGI(TAG, "System start");
 
-    if (lora_init() != ESP_OK){
+    if (rf_init_module(txPowerInDbm, frequencyInHz) != ESP_OK){
         ESP_LOGE(TAG, "LoRa init failed");
         return;
     }
 
-    if (lora_configure() != ESP_OK){
+    if (rf_configure(RF_MODE_FANET,&rf_config) != ESP_OK){
         ESP_LOGE(TAG, "LoRa config failed");
         return;
     }
 
-    if (lora_rx_start() != ESP_OK){
+    if (rf_rx_start() != ESP_OK){
         ESP_LOGE(TAG, "LoRa RX start failed");
         return;
     }

@@ -294,6 +294,91 @@ void LoRaConfig(uint8_t spreadingFactor, uint8_t bandwidth, uint8_t codingRate, 
 	SetRx(0xFFFFFF);
 }
 
+void GFSKConfig(uint32_t bitrate,uint32_t fdev, uint8_t rxBw,uint16_t preambleLength,uint8_t payloadLen,bool crcOn,bool whiteningOn){
+    SetStopRxTimerOnPreambleDetect(false);
+    // modeGFSK
+    SetPacketType(SX126X_PACKET_TYPE_GFSK);
+
+    // =========================
+    // MODULATION PARAMS
+    // =========================
+    uint8_t modParams[8];
+
+    // Bitrate (24-bit)
+    modParams[0] = (bitrate >> 16) & 0xFF;
+    modParams[1] = (bitrate >> 8) & 0xFF;
+    modParams[2] = bitrate & 0xFF;
+
+    // Gaussian filter BT=0.5 (OGN requirement)
+    modParams[3] = SX126X_GFSK_FILTER_GAUSS_0_5;
+
+    // Frequency deviation (24-bit)
+    modParams[4] = (fdev >> 16) & 0xFF;
+    modParams[5] = (fdev >> 8) & 0xFF;
+    modParams[6] = fdev & 0xFF;
+
+    // RX bandwidth
+    modParams[7] = rxBw;
+
+    WriteCommand(SX126X_CMD_SET_MODULATION_PARAMS, modParams, 8);
+
+    // =========================
+    // PACKET PARAMS
+    // =========================
+    uint8_t pktParams[9];
+
+    // Preamble length
+    pktParams[0] = (preambleLength >> 8) & 0xFF;
+    pktParams[1] = preambleLength & 0xFF;
+
+    // Preamble detector (min 16 bits)
+    pktParams[2] = SX126X_GFSK_PREAMBLE_DETECT_16;
+
+    // Sync word length (4 bytes = 32 bits)
+    pktParams[3] = 0x04;
+
+    // Address filtering OFF
+    pktParams[4] = SX126X_GFSK_ADDRESS_FILT_OFF;
+
+    // Packet type
+    if (payloadLen){
+        pktParams[5] = SX126X_GFSK_PACKET_FIXED;
+        pktParams[6] = payloadLen;
+    }
+    else{
+        pktParams[5] = SX126X_GFSK_PACKET_VARIABLE;
+        pktParams[6] = 0xFF;
+    }
+
+    // CRC
+    pktParams[7] = crcOn ? SX126X_GFSK_CRC_2_BYTE : SX126X_GFSK_CRC_OFF;
+
+    // Whitening
+    pktParams[8] = whiteningOn ? SX126X_GFSK_WHITENING_ON : SX126X_GFSK_WHITENING_OFF;
+
+    WriteCommand(SX126X_CMD_SET_PACKET_PARAMS, pktParams, 9);
+
+    // =========================
+    // SYNC WORD 
+    // =========================
+    uint8_t syncWord[4] = {0x2D, 0xD4, 0x00, 0x00}; // placeholder
+
+    WriteRegister(SX126X_REG_SYNC_WORD_0, syncWord, 4);
+
+    // =========================
+    // IRQ
+    // =========================
+    SetDioIrqParams(
+        SX126X_IRQ_ALL,
+        SX126X_IRQ_NONE,
+        SX126X_IRQ_NONE,
+        SX126X_IRQ_NONE
+    );
+
+    // RX continuous
+    SetRx(0xFFFFFF);
+}
+
 
 void LoRaDebugPrint(bool enable) 
 {

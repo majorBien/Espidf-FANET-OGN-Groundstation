@@ -373,6 +373,7 @@
 
 // Public function
 void     LoRaInit(void);
+void 	 GFSKConfig(uint32_t bitrate,uint32_t fdev,uint8_t rxBw,uint16_t preambleLength,uint8_t payloadLen,bool crcOn,bool whiteningOn);
 int16_t  LoRaBegin(uint32_t frequencyInHz, int8_t txPowerInDbm, float tcxoVoltage, bool useRegulatorLDO);
 void     LoRaConfig(uint8_t spreadingFactor, uint8_t bandwidth, uint8_t codingRate, uint16_t preambleLength, uint8_t payloadLen, bool crcOn, bool invertIrq);
 uint8_t  LoRaReceive(uint8_t *pData, int16_t len);

@@ -1,4 +1,4 @@
-set(component_srcs "lora.c" "decoder.c" "types.c")
+set(component_srcs "rf.c" "decoder.c" "types.c")
 
 idf_component_register(
 	SRCS "${component_srcs}"
