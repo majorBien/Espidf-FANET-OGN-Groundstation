@@ -83,6 +83,6 @@ C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/spiffs/libspiffs.a
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/wifi_provisioning/libwifi_provisioning.a
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/main/libmain.a
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/ra01s/libra01s.a
-C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/libfanet_decoder.a
+C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_ogn_decoder/libfanet_ogn_decoder.a
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/flash_storage/libflash_storage.a
 C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/network/libnetwork.a

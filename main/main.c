@@ -9,7 +9,8 @@
 #define frequencyInHz 868000000
 
 static const char *TAG = "MAIN";
-lora_receiver_t rf_config;
+lora_receiver_t rf_config1;
+gfsk_receiver_t rf_config2;
 
 void app_main(void){
 	esp_err_t ret = nvs_init_storage();
@@ -17,23 +18,23 @@ void app_main(void){
     ESP_LOGI(TAG, "System start");
 
     if (rf_init_module(txPowerInDbm, frequencyInHz) != ESP_OK){
-        ESP_LOGE(TAG, "LoRa init failed");
+        ESP_LOGE(TAG, "Radio init failed");
         return;
     }
 
-    if (rf_configure(RF_MODE_FANET,&rf_config) != ESP_OK){
-        ESP_LOGE(TAG, "LoRa config failed");
+    if (rf_configure(RF_MODE_OGN,&rf_config2) != ESP_OK){
+        ESP_LOGE(TAG, "Radio config failed");
         return;
     }
 
     if (rf_rx_start() != ESP_OK){
-        ESP_LOGE(TAG, "LoRa RX start failed");
+        ESP_LOGE(TAG, "Radio RX start failed");
         return;
     }
     ESP_ERROR_CHECK(esp_netif_init());
     wifi_app_start();
 
-    ESP_LOGI(TAG, "LoRa running");
+    ESP_LOGI(TAG, "Radio running");
 }
 
 
@@ -43,7 +44,7 @@ void app_main(void){
 #include "esp_log.h"
 #include "types.h"
 #include "stdio.h"
-#include "types.h"
+#include "fanet_types.h"
 #include "string.h"
 
 static const char *TAG = "FANET_TX";

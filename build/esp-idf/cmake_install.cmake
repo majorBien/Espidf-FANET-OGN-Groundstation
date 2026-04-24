@@ -559,7 +559,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_decoder/cmake_install.cmake")
+  include("C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/fanet_ogn_decoder/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
