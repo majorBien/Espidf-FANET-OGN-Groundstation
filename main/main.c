@@ -9,8 +9,8 @@
 #define frequencyInHz 868000000
 
 static const char *TAG = "MAIN";
-lora_receiver_t rf_config1;
-gfsk_receiver_t rf_config2;
+lora_receiver_t fanet_receiver;
+gfsk_receiver_t ogn_receiver;
 
 void app_main(void){
 	esp_err_t ret = nvs_init_storage();
@@ -22,7 +22,7 @@ void app_main(void){
         return;
     }
 
-    if (rf_configure(RF_MODE_OGN,&rf_config2) != ESP_OK){
+    if (rf_configure(RF_MODE_OGN,&ogn_receiver) != ESP_OK){
         ESP_LOGE(TAG, "Radio config failed");
         return;
     }

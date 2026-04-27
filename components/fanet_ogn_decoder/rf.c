@@ -25,19 +25,46 @@ static TaskHandle_t rx_task_handle = NULL;
  * RX TASK
  * =========================
  */
-static void lora_rx_task(void *arg){
+/**
+ * @brief Helper to log raw packet bytes as hex (if ESP_LOG_BUFFER_HEX not available)
+ */
+static void log_hex(const char *tag, const uint8_t *buf, int len) {
+    char hex_str[255 * 3 + 1];
+    int pos = 0;
+    for (int i = 0; i < len && pos < (int)sizeof(hex_str) - 3; i++) {
+        pos += sprintf(hex_str + pos, "%02X ", buf[i]);
+    }
+    if (pos > 0) hex_str[pos - 1] = '\0'; // remove trailing space
+    ESP_LOGI(tag, "RAW HEX: %s", hex_str);
+}
+
+static void lora_rx_task(void *arg) {
     ESP_LOGI(TAG, "RX task started");
     uint8_t buf[255];
 
-    while (1){
+    while (1) {
         uint8_t rxLen = LoRaReceive(buf, sizeof(buf));
-        if (rxLen > 0){
+        if (rxLen > 0) {
             int8_t rssi, snr;
             GetPacketStatus(&rssi, &snr);
-            //fanet_decoder_decode(buf, rxLen, rssi, snr);
-            ogn_decoder_decode(buf, rxLen, rssi, snr);
-            ESP_LOGI(TAG, "%d byte packet:[%.*s]", rxLen, rxLen, buf);
-            ESP_LOGI(TAG, "rssi=%d snr=%d", rssi, snr);
+
+            // --- Debug output: raw packet bytes ---
+            ESP_LOGI(TAG, "Received %d bytes, RSSI=%d, SNR=%d", rxLen, rssi, snr);
+            log_hex(TAG, buf, rxLen);               // print hex dump
+            // Optional: print first 4 bytes as ASCII (if printable)
+            if (rxLen >= 4) {
+                ESP_LOGI(TAG, "First 4 bytes: 0x%02X%02X%02X%02X",
+                         buf[0], buf[1], buf[2], buf[3]);
+            }
+            // --- End debug ---
+
+            // Decode as OGN only if it looks like a valid OGN packet (at least 20 bytes)
+            if (rxLen >= 20) {
+				//fanet_decoder_decode(buf, rxLen, rssi, snr);
+                ogn_decoder_decode(buf, rxLen, rssi, snr);
+            } else {
+                ESP_LOGW(TAG, "Packet too short for OGN (%d bytes)", rxLen);
+            }
         }
         vTaskDelay(1);
     }
@@ -151,5 +178,4 @@ esp_err_t rf_rx_stop(void){
 
     return ESP_OK;
 }
-
 

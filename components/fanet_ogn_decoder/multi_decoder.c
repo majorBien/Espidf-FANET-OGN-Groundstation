@@ -15,6 +15,7 @@
 #include <time.h>
 
 #include "esp_log.h"
+#include "ogn_conv.h"
 
 static const char *TAG = "FANET_DECODER";
 
@@ -150,11 +151,77 @@ void fanet_decoder_decode(const uint8_t *data, int len, int rssi, int snr){
     }
 }
 
-void ogn_decoder_decode(const uint8_t *data, int len, int rssi, int snr) {
+/*void ogn_decoder_decode(const uint8_t *data, int len, int rssi, int snr) {
     ogn_tracking_data_t track;
 
     if (unpack_ogn_tracking(data, len, &track, rssi, snr)) {
         store_ogn_tracking_data(&track);
         print_ogn_tracking(&track);
+    }
+}*/
+
+/**
+ * @file ogn_decoder.c
+ * @brief Example integration of ogn_types and ogn_conv modules
+ */
+
+#include "ogn_types.h"
+#include "ogn_conv.h"
+#include <stdio.h>
+
+/**
+ * Decode raw OGN packet and process with additional conversions.
+ * @param data  Raw packet bytes
+ * @param len   Packet length
+ * @param rssi  Received signal strength [dBm]
+ * @param snr   Signal-to-noise ratio [dB]
+ */
+void ogn_decoder_decode(const uint8_t *data, int len, int rssi, int snr) {
+    ogn_tracking_data_t track;
+
+    if (unpack_ogn_tracking(data, len, &track, rssi, snr)) {
+        // --- Additional processing using ogn_conv functions ---
+
+        // 1. Convert OGN aircraft type to ADSB category
+        uint8_t adsb_cat = AcftType_OGNtoADSB(track.acft_type);
+        
+        // 2. Get human-readable aircraft type name
+        const char *acft_names[] = {
+            "Glider", "Tow plane", "Helicopter", "Paraglider",
+            "Hang glider", "Balloon", "UAV", "Other"
+        };
+        const char *acft_name = (track.acft_type <= OGN_ACFT_OTHER) 
+                                ? acft_names[track.acft_type] 
+                                : "Unknown";
+
+        // 3. Convert speed from m/s to knots (1 m/s = 1.94384 kn)
+        double speed_knots = track.speed * 1.94384;
+
+        // 4. Convert climb rate from m/s to ft/min (1 m/s = 196.85 ft/min)
+        double climb_fpm = track.climb * 196.85;
+
+        // 5. Compute barometric temperature at GNSS altitude (example)
+        float temp_kelvin = BaroTemp((float)track.alt_gnss);
+        float temp_celsius = temp_kelvin - 273.15f;
+
+        // 6. Decode Gray code (if any field was Gray-encoded, e.g., a hypothetical field)
+        // uint8_t decoded = DecodeGray8(encoded_value);
+
+        // Print enhanced tracking information
+        printf("=== OGN Tracking ===\n");
+        printf("Device: %s\n", track.common.devId);
+        printf("Aircraft: %s (OGN type %d, ADSB cat %d)\n", acft_name, track.acft_type, adsb_cat);
+        printf("Position: %.6f, %.6f\n", track.common.lat, track.common.lon);
+        printf("Altitude GNSS: %.1f m\n", track.alt_gnss);
+        printf("Speed: %.1f m/s (%.1f kn)\n", (float)track.speed, (float)speed_knots);
+        printf("Climb: %.1f m/s (%.0f ft/min)\n", (float)track.climb, (float)climb_fpm);
+        printf("Heading: %.1f deg, Turn: %d deg/s\n", (float)track.heading, track.turn_rate);
+        printf("Temperature (ISA): %.1f °C\n", temp_celsius);
+        printf("Fix: %s, DOP: %u\n", track.fix_mode ? "3D" : "2D", track.dop);
+        printf("Emergency: %s\n", track.emergency ? "YES" : "NO");
+        printf("===================\n");
+
+        // Store in global array (original behavior)
+        store_ogn_tracking_data(&track);
     }
 }

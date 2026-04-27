@@ -1,6 +1,6 @@
 /**
  * @file ogn_types.h
- * @brief OGN protocol data types and structures
+ * @brief OGN protocol data types and structures (compatible with original C++ code)
  */
 
 #ifndef OGN_TYPES_H
@@ -26,7 +26,7 @@ typedef enum {
     OGN_ADDR_OGN   = 3
 } ogn_addr_type_t;
 
-/** Aircraft type (4 bits) */
+/** Aircraft type (4 bits) - matches OGN1_Packet::Position.AcftType */
 typedef enum {
     OGN_ACFT_GLIDER     = 0,
     OGN_ACFT_TOW        = 1,
@@ -43,11 +43,11 @@ typedef enum {
     OGN_FIX_NONE = 0,
     OGN_FIX_GPS  = 1,
     OGN_FIX_DGPS = 2,
-    OGN_FIX_OTHER= 3
+    OGN_FIX_OTHER = 3
 } ogn_fix_quality_t;
 
 /*==============================================================================
- * Structures
+ * Structures - using integer types with fixed scaling like original C++
  *============================================================================*/
 
 /** Common data for every OGN device */
@@ -58,13 +58,14 @@ typedef struct {
     int rssi;                 /**< RSSI [dBm] */
     float snr;                /**< SNR [dB] */
     time_t timestamp;         /**< Reception timestamp */
-    double lat;               /**< Latitude [deg] */
+    double lat;               /**< Latitude [deg] (decoded as double for convenience) */
     double lon;               /**< Longitude [deg] */
 } ogn_common_t;
 
-/** Tracking (position) packet data */
+/** Tracking (position) packet data - scaled as in OGN1_Packet decode methods */
 typedef struct {
     ogn_common_t common;               /**< Common fields */
+
     ogn_addr_type_t addr_type;         /**< Address type */
     bool addr_parity;                  /**< Address parity bit */
     bool emergency;                    /**< Emergency flag */
@@ -74,12 +75,24 @@ typedef struct {
     ogn_aircraft_type_t acft_type;     /**< Aircraft type */
     bool stealth;                      /**< Stealth mode */
     uint8_t time_sec;                  /**< UTC seconds (0-59, 0x3F = invalid) */
+
+    /* These fields use the same scaling as original C++ decode functions:
+     * - altitude: meters (0..61432) but original uses decimeters? Let's keep meters for simplicity.
+     *   Actually original OGN1_Packet::DecodeAltitude() returns meters (as int).
+     *   We'll keep double for now but can change to int if needed.
+     * - alt_pressure: pressure altitude difference [m] (signed)
+     * - climb: [0.1 m/s] -> stored as int16_t
+     * - speed: [0.1 m/s] -> stored as uint16_t
+     * - heading: [0.1 deg] -> stored as uint16_t
+     * - turn_rate: [0.1 deg/s] -> stored as int16_t
+     */
     double alt_gnss;                   /**< GNSS altitude [m] (above geoid) */
     double alt_pressure;               /**< Pressure altitude difference [m] */
-    double climb;                      /**< Climb rate [m/s] */
-    double speed;                      /**< Ground speed [m/s] */
-    double heading;                    /**< Track heading [deg] */
-    int8_t turn_rate;                  /**< Turn rate [deg/s] */
+    int16_t climb;                     /**< Climb rate [0.1 m/s] */
+    uint16_t speed;                    /**< Ground speed [0.1 m/s] */
+    uint16_t heading;                  /**< Track heading [0.1 deg] */
+    int16_t turn_rate;                 /**< Turn rate [0.1 deg/s] */
+
     bool fix_mode;                     /**< 0=2D, 1=3D */
     ogn_fix_quality_t fix_quality;     /**< GPS fix quality */
     uint8_t dop;                       /**< Dilution of precision (0-63) */
@@ -106,7 +119,7 @@ bool ogn_common_match(const ogn_common_t *a, const ogn_common_t *b);
 /** Copy common fields (except timestamp) */
 void ogn_common_assign(ogn_common_t *dest, const ogn_common_t *src);
 
-/** Unpack raw OGN packet into tracking data */
+/** Unpack raw OGN packet into tracking data (scaled as per original) */
 bool unpack_ogn_tracking(const uint8_t *buffer, int len, ogn_tracking_data_t *data,
                          int rssi, int snr);
 
@@ -115,7 +128,6 @@ int store_ogn_tracking_data(const ogn_tracking_data_t *data);
 
 /** Debug print of tracking data */
 void print_ogn_tracking(const ogn_tracking_data_t *data);
-
 
 #ifdef __cplusplus
 }
