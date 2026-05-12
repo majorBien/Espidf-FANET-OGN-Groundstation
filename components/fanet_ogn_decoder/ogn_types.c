@@ -3,15 +3,13 @@
  * @brief OGN packet unpacking, storage and utilities - compatible with original C++
  */
 
-#include "ogn_types.h"
+ #include "ogn_types.h"
+#include "ogn_conv.h"
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
 
-/*------------------------------------------------------------------------------
- * Global storage
- *----------------------------------------------------------------------------*/
-ogn_tracking_data_t ogn_tracking_store[MAX_OGN_DEVICES];
+static ogn_tracking_data_t ogn_tracking_store[MAX_OGN_DEVICES];
 
 /*------------------------------------------------------------------------------
  * Helper: 24-bit sign extension (for latitude/longitude)
@@ -23,40 +21,12 @@ static inline int32_t sign_extend_24(uint32_t x) {
 }
 
 /*------------------------------------------------------------------------------
- * Helper: 9-bit sign extension (for pressure altitude and climb raw values)
+ * Helper: 9-bit sign extension (for raw pressure altitude)
  *----------------------------------------------------------------------------*/
 static inline int16_t sign_extend_9(uint16_t x) {
     if (x & 0x100)
         x |= 0xFE00;
     return (int16_t)x;
-}
-
-/*------------------------------------------------------------------------------
- * Convert VID + address to string (e.g. "12ABCD")
- *----------------------------------------------------------------------------*/
-void ogn_addr_to_string(uint8_t vid, uint32_t addr, char *out) {
-    sprintf(out, "%02X%06lX", vid, (unsigned long)(addr & 0xFFFFFF));
-}
-
-/*------------------------------------------------------------------------------
- * Compare two common structures (ignore timestamp)
- *----------------------------------------------------------------------------*/
-bool ogn_common_match(const ogn_common_t *a, const ogn_common_t *b) {
-    return (a->vid == b->vid) && (a->address == b->address);
-}
-
-/*------------------------------------------------------------------------------
- * Copy common fields (timestamp is not overwritten)
- *----------------------------------------------------------------------------*/
-void ogn_common_assign(ogn_common_t *dest, const ogn_common_t *src) {
-    strcpy(dest->devId, src->devId);
-    dest->vid = src->vid;
-    dest->address = src->address;
-    dest->rssi = src->rssi;
-    dest->snr = src->snr;
-    dest->lat = src->lat;
-    dest->lon = src->lon;
-    /* timestamp intentionally not copied */
 }
 
 /*------------------------------------------------------------------------------
@@ -85,109 +55,126 @@ static uint32_t read_bits(const uint8_t *data, int *bitpos, int bits) {
 }
 
 /*------------------------------------------------------------------------------
- * Unpack OGN tracking (position) packet
- * 
- * This function decodes a raw OGN packet into ogn_tracking_data_t structure.
- * The scaling matches original OGN1_Packet decode methods:
- * - latitude/longitude: degrees (double)
- * - altitude: meters (double)
- * - climb, speed, heading, turn_rate: integer with 0.1 resolution
+ * Convert address to device ID string (no VID, just 6-digit hex)
+ *----------------------------------------------------------------------------*/
+void ogn_addr_to_string(uint8_t vid, uint32_t addr, char *out) {
+    (void)vid; // VID not used in OGN
+    sprintf(out, "%06lX", (unsigned long)(addr & 0xFFFFFF));
+}
+
+/*------------------------------------------------------------------------------
+ * Compare two common structures (ignore timestamp)
+ *----------------------------------------------------------------------------*/
+bool ogn_common_match(const ogn_common_t *a, const ogn_common_t *b) {
+    return (a->address == b->address);
+}
+
+/*------------------------------------------------------------------------------
+ * Copy common fields (timestamp is not overwritten)
+ *----------------------------------------------------------------------------*/
+void ogn_common_assign(ogn_common_t *dest, const ogn_common_t *src) {
+    strcpy(dest->devId, src->devId);
+    dest->vid = 0;
+    dest->address = src->address;
+    dest->rssi = src->rssi;
+    dest->snr = src->snr;
+    dest->lat = src->lat;
+    dest->lon = src->lon;
+}
+
+/*------------------------------------------------------------------------------
+ * Unpack OGN tracking (position) packet according to OGNTP specification
  *----------------------------------------------------------------------------*/
 bool unpack_ogn_tracking(const uint8_t *buffer, int len, ogn_tracking_data_t *data,
                          int rssi, int snr) {
-    if (!buffer || len < 20 || !data) return false;
+    if (!buffer || !data) return false;
+    // OGN packet length: 20 bytes (no FEC) or 26 bytes (with FEC)
+    if (len != 20 && len != 26) return false;
 
-    // Clear target
     memset(data, 0, sizeof(ogn_tracking_data_t));
-
-    // Common fields
     data->common.rssi = rssi;
     data->common.snr = (float)snr;
     data->common.timestamp = time(NULL);
 
-    // --- Header (bytes 0-3) ---
-    data->common.vid = buffer[1];                         // Vendor ID (byte1)
-    uint32_t addr24 = ((uint32_t)buffer[2] << 16) | ((uint32_t)buffer[3] << 8) | buffer[4];
-    data->common.address = addr24;
-    ogn_addr_to_string(data->common.vid, addr24, data->common.devId);
+    // -------------------------------
+    // 1. Extract 24‑bit address and header flags
+    // -------------------------------
+    // According to OGN1_Packet, first 4 bytes contain:
+    // - address (24 bits, big‑endian)
+    // - addr_type (2 bits)
+    // - addr_parity (1 bit)
+    // - emergency (1 bit)
+    // - relay_cnt (2 bits)
+    // - other_data (1 bit)
+    // - custom_enc (1 bit)
+    uint32_t addr_raw = ((uint32_t)buffer[0] << 16) | ((uint32_t)buffer[1] << 8) | buffer[2];
+    data->common.address = addr_raw;
+    ogn_addr_to_string(0, addr_raw, data->common.devId);
 
-    // Bitstream parsing after header
-    int bitpos = 32; // 4 bytes header consumed
+    uint8_t header_byte = buffer[3];
+    data->addr_type   = (ogn_addr_type_t)((header_byte >> 6) & 0x03);
+    data->addr_parity = (header_byte >> 5) & 0x01;
+    data->emergency   = (header_byte >> 4) & 0x01;
+    data->relay_cnt   = (header_byte >> 2) & 0x03;
+    data->other_data  = (header_byte >> 1) & 0x01;
+    data->custom_enc  = header_byte & 0x01;
 
-    // address_type (2 bits)
-    data->addr_type = (ogn_addr_type_t)read_bits(buffer, &bitpos, 2);
-    // address_parity (1)
-    data->addr_parity = read_bits(buffer, &bitpos, 1) != 0;
-    // emergency (1)
-    data->emergency = read_bits(buffer, &bitpos, 1) != 0;
-    // relay_count (2)
-    data->relay_cnt = read_bits(buffer, &bitpos, 2);
-    // other_data (1)
-    data->other_data = read_bits(buffer, &bitpos, 1) != 0;
-    // custom_encrypt (1)
-    data->custom_enc = read_bits(buffer, &bitpos, 1) != 0;
-
-    // If other_data is set, this is not a position packet -> return false
+    // If 'other_data' flag is set, this is not a position packet
     if (data->other_data) return false;
 
-    // aircraft_type (4)
+    // -------------------------------
+    // 2. Parse payload (16 bytes) using bit reader
+    // -------------------------------
+    int bitpos = 32; // 4 bytes already consumed
+
+    // Aircraft type (4 bits)
     data->acft_type = (ogn_aircraft_type_t)read_bits(buffer, &bitpos, 4);
-    // stealth (1)
+    // Stealth flag (1 bit)
     data->stealth = read_bits(buffer, &bitpos, 1) != 0;
-    // time_sec (6) – seconds of UTC minute
+    // UTC second (6 bits)
     data->time_sec = read_bits(buffer, &bitpos, 6);
 
-    // Latitude (24 bits, signed) - resolution: 0.0008/60 degrees
+    // Latitude (24 bits, signed, resolution 0.0008/60 deg)
     uint32_t lat_raw = read_bits(buffer, &bitpos, 24);
-    int32_t lat_signed = sign_extend_24(lat_raw);
-    data->common.lat = (double)lat_signed * (0.0008 / 60.0);
+    data->common.lat = (double)sign_extend_24(lat_raw) * (0.0008 / 60.0);
 
-    // Longitude (24 bits, signed) - resolution: 0.0016/60 degrees
+    // Longitude (24 bits, signed, resolution 0.0016/60 deg)
     uint32_t lon_raw = read_bits(buffer, &bitpos, 24);
-    int32_t lon_signed = sign_extend_24(lon_raw);
-    data->common.lon = (double)lon_signed * (0.0016 / 60.0);
+    data->common.lon = (double)sign_extend_24(lon_raw) * (0.0016 / 60.0);
 
-    // GNSS altitude (14 bits, unsigned) – resolution 1 m, range 0..16383 m
+    // GNSS altitude (14 bits, unsigned, 1 m resolution)
     uint32_t alt_gnss_raw = read_bits(buffer, &bitpos, 14);
     data->alt_gnss = (double)alt_gnss_raw;
 
-    // Pressure altitude difference (9 bits, signed) – resolution 1 m, range -255..+255 m
+    // Pressure altitude difference (9 bits, signed, 1 m resolution)
     uint32_t alt_pres_raw = read_bits(buffer, &bitpos, 9);
     data->alt_pressure = (double)sign_extend_9(alt_pres_raw);
 
-    // Climb rate (9 bits, signed) – resolution 0.1 m/s, range -25.5..+25.5 m/s
+    // Climb rate (9 bits, variable‑rate encoded)
     uint32_t climb_raw = read_bits(buffer, &bitpos, 9);
-    data->climb = sign_extend_9(climb_raw);   // stored as 0.1 m/s
+    // climb_raw is 9‑bit value that must be decoded using DecodeSR2V6
+    data->climb = DecodeSR2V6((int16_t)climb_raw);   // returns 0.1 m/s
 
-    // Speed (10 bits, unsigned) – resolution 0.1 m/s, range 0..102.3 m/s? Actually 0..383.2 m/s? 10 bits give 0..1023, times 0.1 = 102.3 m/s
+    // Speed (10 bits, variable‑rate encoded)
     uint32_t speed_raw = read_bits(buffer, &bitpos, 10);
-    data->speed = (uint16_t)speed_raw;        // stored as 0.1 m/s
+    data->speed = DecodeUR2V8((uint16_t)speed_raw);  // returns 0.1 m/s
 
-    // Heading (10 bits, unsigned) – resolution 0.1 deg, range 0..102.3 deg? 10 bits give 0..1023, times 0.1 = 102.3 deg, but heading is 0-360, so must be scaled differently.
-    // Wait, original spec: heading is 10 bits, resolution 0.1 deg, range 0-360. That would require 3600 values, which fits in 12 bits. 10 bits only gives 1024 values.
-    // In OGN v1, heading is stored as 10 bits with 360/1024? Let's follow original OGN1_Packet::DecodeHeading().
-    // Actually the original code uses EncodeUR2V8/DecodeUR2V8 for heading? Need to check. For now, we keep as raw.
-    // We'll follow the same as speed: store as raw 0.1 deg value, but note that max is 102.3 deg which is wrong.
-    // The correct OGN v1 heading encoding: 10 bits unsigned, resolution 360/1024 = 0.3515625 deg. So we should multiply by 360.0/1024.0.
-    // But to keep compatibility with original decode, we store as uint16_t with resolution 0.1 deg (incorrect). Better to store as double.
-    // However original C++ stores as uint16_t with 0.1 deg? Let's check: In OGN1_Packet::DecodeHeading(), it does: return ((Heading<<4)+0x80)>>8; That returns 0..3600? Not sure.
-    // To be safe, we store as double for now.
+    // Heading (10 bits, variable‑rate encoded)
     uint32_t heading_raw = read_bits(buffer, &bitpos, 10);
-    data->heading = (double)heading_raw * (360.0 / 1024.0);   // convert to degrees
+    uint16_t heading_tenth = DecodeUR2V8((uint16_t)heading_raw);
+    data->heading = heading_tenth;                   // stored as 0.1 deg
 
-    // Turn rate (8 bits, signed) – resolution 0.1 deg/s, range -12.8..+12.7 deg/s? Actually 8 bits signed gives -128..127, times 0.1 = -12.8..12.7 deg/s.
-    // Original spec says turn rate is 8 bits signed, resolution 0.1 deg/s, range -25.5..+25.5? That would require 9 bits signed. Let's follow original: it's 8 bits, signed, resolution 0.1 deg/s.
+    // Turn rate (8 bits, variable‑rate encoded)
     uint32_t turn_raw = read_bits(buffer, &bitpos, 8);
-    int8_t turn_signed = (turn_raw & 0x80) ? (int8_t)(turn_raw | 0xFFFFFF00) : (int8_t)turn_raw;
-    data->turn_rate = (int16_t)turn_signed;   // stored as 0.1 deg/s
+    data->turn_rate = DecodeSR2V5((int8_t)turn_raw); // returns 0.1 deg/s
 
-    // GPS fix mode (1 bit)
+    // Fix mode (1 bit)
     data->fix_mode = read_bits(buffer, &bitpos, 1) != 0;
-    // GPS fix quality (2 bits)
+    // Fix quality (2 bits)
     data->fix_quality = (ogn_fix_quality_t)read_bits(buffer, &bitpos, 2);
-    // GPS DOP (6 bits)
+    // DOP (6 bits)
     data->dop = read_bits(buffer, &bitpos, 6);
-    // reserved 4 bits (ignore)
+    // Reserved 4 bits (ignored)
 
     return true;
 }
@@ -198,7 +185,6 @@ bool unpack_ogn_tracking(const uint8_t *buffer, int len, ogn_tracking_data_t *da
 int store_ogn_tracking_data(const ogn_tracking_data_t *newData) {
     if (!newData) return -1;
 
-    // Find existing device
     for (int i = 0; i < MAX_OGN_DEVICES; ++i) {
         if (ogn_tracking_store[i].common.timestamp != 0 &&
             ogn_common_match(&ogn_tracking_store[i].common, &newData->common)) {
@@ -207,7 +193,6 @@ int store_ogn_tracking_data(const ogn_tracking_data_t *newData) {
         }
     }
 
-    // Find free slot
     for (int i = 0; i < MAX_OGN_DEVICES; ++i) {
         if (ogn_tracking_store[i].common.timestamp == 0) {
             ogn_tracking_store[i] = *newData;
@@ -215,7 +200,6 @@ int store_ogn_tracking_data(const ogn_tracking_data_t *newData) {
         }
     }
 
-    // Overwrite oldest
     int oldest_idx = 0;
     time_t oldest_ts = ogn_tracking_store[0].common.timestamp;
     for (int i = 1; i < MAX_OGN_DEVICES; ++i) {
@@ -233,14 +217,13 @@ int store_ogn_tracking_data(const ogn_tracking_data_t *newData) {
  *----------------------------------------------------------------------------*/
 void print_ogn_tracking(const ogn_tracking_data_t *d) {
     printf("=== OGN Tracking ===\n");
-    printf("DevId: %s\n", d->common.devId);
-    printf("Time: %ld\n", (long)d->common.timestamp);
-    printf("Pos: %.6f, %.6f\n", d->common.lat, d->common.lon);
-    printf("Alt GNSS: %.1f m, Press diff: %.1f m\n", d->alt_gnss, d->alt_pressure);
-    // Convert scaled integer values to human-readable
-    printf("Speed: %.1f m/s, Heading: %.1f deg\n", d->speed * 0.1, (float)d->heading);
-    printf("Climb: %.1f m/s, Turn: %.1f deg/s\n", d->climb * 0.1, d->turn_rate * 0.1);
-    printf("Aircraft: %d, Emergency: %d\n", d->acft_type, d->emergency);
+    printf("Device: %s\n", d->common.devId);
+    printf("Position: %.6f, %.6f\n", d->common.lat, d->common.lon);
+    printf("Altitude GNSS: %.1f m\n", d->alt_gnss);
+    printf("Speed: %.1f m/s (%.1f kn)\n", d->speed * 0.1f, d->speed * 0.194384f);
+    printf("Climb: %.1f m/s (%.0f ft/min)\n", d->climb * 0.1f, d->climb * 19.685f);
+    printf("Heading: %.1f deg, Turn: %.1f deg/s\n", d->heading * 0.1f, d->turn_rate * 0.1f);
+    printf("Aircraft type: %d, Emergency: %s\n", d->acft_type, d->emergency ? "YES" : "NO");
     printf("Fix: %s, DOP: %u\n", d->fix_mode ? "3D" : "2D", d->dop);
     printf("===================\n");
 }

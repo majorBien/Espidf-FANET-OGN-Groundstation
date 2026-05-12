@@ -118,32 +118,20 @@ esp_err_t rf_configure(uint8_t mode, void *config){
             cfg->invert
         );
     }
-    else if (mode == RF_MODE_OGN){
-        // =========================
-        // OGN → GFSK
-        // =========================
-        gfsk_receiver_t *cfg = (gfsk_receiver_t *)config;
-
-        cfg->bitrate = 100000;
-        cfg->fdev = 50000;
-        cfg->rxBw = SX126X_GFSK_RX_BW_156_2;
-        cfg->preambleLength = 32;
-        cfg->payloadLen = 0;
-        cfg->crcOn = true;
-        cfg->whiteningOn = false;
-
-        ESP_LOGI(TAG, "RF: OGN (GFSK)");
-
-        GFSKConfig(
-            cfg->bitrate,
-            cfg->fdev,
-            cfg->rxBw,
-            cfg->preambleLength,
-            cfg->payloadLen,
-            cfg->crcOn,
-            cfg->whiteningOn
-        );
-    }
+ 	else if (mode == RF_MODE_OGN){
+    gfsk_receiver_t *cfg = (gfsk_receiver_t *)config;
+    cfg->bitrate = 100000;
+    cfg->fdev = 50000;
+    cfg->rxBw = SX126X_GFSK_RX_BW_156_2;
+    cfg->preambleLength = 32;
+    cfg->payloadLen = 0;
+    cfg->crcOn = true;
+    cfg->whiteningOn = false;
+    ESP_LOGI(TAG, "RF: OGN (GFSK)");
+    // Ensure we start from standby
+    SetStandby(SX126X_STANDBY_RC);
+    GFSKConfig(cfg->bitrate, cfg->fdev, cfg->rxBw, cfg->preambleLength, cfg->payloadLen, cfg->crcOn, cfg->whiteningOn);
+}
     else{
         ESP_LOGE(TAG, "Invalid RF mode");
         return ESP_ERR_INVALID_ARG;

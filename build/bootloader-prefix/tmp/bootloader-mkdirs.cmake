@@ -10,18 +10,18 @@ if(NOT EXISTS "C:/Espressif/frameworks/esp-idf-v5.4/components/bootloader/subpro
   file(MAKE_DIRECTORY "C:/Espressif/frameworks/esp-idf-v5.4/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader"
-  "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader-prefix"
-  "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader-prefix/tmp"
-  "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader-prefix/src/bootloader-stamp"
-  "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader-prefix/src"
-  "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader"
+  "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader-prefix"
+  "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader-prefix/tmp"
+  "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader-prefix/src"
+  "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "C:/Users/lenovo/workspace-eclipse/ogn-station/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

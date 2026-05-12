@@ -1,4 +1,4 @@
-/* * Data converted from C:/Users/lenovo/workspace-eclipse/ogn-station/components/network/webpage/app.css
+/* * Data converted from C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/components/network/webpage/app.css
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)

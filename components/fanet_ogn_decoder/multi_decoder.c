@@ -16,6 +16,7 @@
 
 #include "esp_log.h"
 #include "ogn_conv.h"
+#include <stdio.h>
 
 static const char *TAG = "FANET_DECODER";
 
@@ -150,24 +151,6 @@ void fanet_decoder_decode(const uint8_t *data, int len, int rssi, int snr){
         break;
     }
 }
-
-/*void ogn_decoder_decode(const uint8_t *data, int len, int rssi, int snr) {
-    ogn_tracking_data_t track;
-
-    if (unpack_ogn_tracking(data, len, &track, rssi, snr)) {
-        store_ogn_tracking_data(&track);
-        print_ogn_tracking(&track);
-    }
-}*/
-
-/**
- * @file ogn_decoder.c
- * @brief Example integration of ogn_types and ogn_conv modules
- */
-
-#include "ogn_types.h"
-#include "ogn_conv.h"
-#include <stdio.h>
 
 /**
  * Decode raw OGN packet and process with additional conversions.

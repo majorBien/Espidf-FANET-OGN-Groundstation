@@ -104,7 +104,6 @@ typedef struct {
 
 #define MAX_OGN_DEVICES 50
 
-extern ogn_tracking_data_t ogn_tracking_store[MAX_OGN_DEVICES];
 
 /*==============================================================================
  * Function prototypes

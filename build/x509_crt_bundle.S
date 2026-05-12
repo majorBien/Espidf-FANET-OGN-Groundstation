@@ -1,4 +1,4 @@
-/* * Data converted from C:/Users/lenovo/workspace-eclipse/ogn-station/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)

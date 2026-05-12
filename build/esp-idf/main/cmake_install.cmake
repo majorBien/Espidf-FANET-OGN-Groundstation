@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/lenovo/workspace-eclipse/ogn-station/main
+# Install script for directory: C:/Users/lenovo/workspace-eclipse/Espidf-FANET-OGN-Groundstation/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

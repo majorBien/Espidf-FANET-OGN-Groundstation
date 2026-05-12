@@ -1,6 +1,6 @@
 /* Automatically generated file; DO NOT EDIT */
 /* Espressif IoT Development Framework Linker Script */
-/* Generated from: C:\Users\lenovo\workspace-eclipse\ogn-station\build\esp-idf\esp_system\ld\sections.ld.in */
+/* Generated from: C:\Users\lenovo\workspace-eclipse\Espidf-FANET-OGN-Groundstation\build\esp-idf\esp_system\ld\sections.ld.in */
 
 /*
 
